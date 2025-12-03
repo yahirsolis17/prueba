@@ -247,19 +247,32 @@ function stopVibration () {
     btnVibrar.textContent = 'Vibrar';
 }
 
+const supportsVibration = () =>
+    typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+
 function startVibration () {
-    const pattern = [200, 100, 200, 100, 300]; //suave + doble toque
+    const pattern = [400, 150, 400, 150, 500, 200, 500]; //patron mas largo y marcado
+    const total = pattern.reduce((a, b) => a + b, 0);
+    if (navigator.userActivation && !navigator.userActivation.isActive) {
+        alert('La vibracion requiere una interaccion directa del usuario. Toca el boton nuevamente.');
+        return;
+    }
     const ok = navigator.vibrate(pattern);
-    if (!ok) {
+    if (ok === false) {
         alert('La vibracion fue bloqueada o no es compatible en este dispositivo');
         return;
     }
-    vibrateInterval = setInterval(() => navigator.vibrate(pattern), 1500);
+    vibrateInterval = setInterval(() => {
+        const allowed = navigator.vibrate(pattern);
+        if (allowed === false) {
+            stopVibration();
+        }
+    }, total + 250);
     btnVibrar.textContent = 'Detener vibracion';
 }
 
 btnVibrar.addEventListener('click', () => {
-    if (!('vibrate' in navigator)) {
+    if (!supportsVibration()) {
         alert('Vibracion no soportada en este dispositivo/navegador');
         return;
     }
@@ -275,6 +288,7 @@ document.addEventListener('visibilitychange', () => {
         stopVibration();
     }
 });
+document.addEventListener('pagehide', stopVibration);
 
 //tono de llamada
 btnRingtone.addEventListener('click', async () => {
