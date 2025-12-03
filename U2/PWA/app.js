@@ -3,7 +3,10 @@ let stream = null; //Mediastream actual de la camara
 let currentFacing = 'environment'; // User = frontal y enviroment = trasera
 let mediaRecorder = null; //Instancia de mediarecorder para audio 
 let chunks = []; //Buffers para audio grabado
+let audioStream = null; //Stream de microfono
 let beforeInstallEvent = null; //Evento diferido para mostrar el boton de instalacion
+let vibrateInterval = null; //Intervalo para vibracion
+let isRinging = false; //Estado del tono de llamada
 
 //Accesos rapidos al DOM
 const $ = (sel) => document.querySelector(sel);
@@ -21,6 +24,11 @@ const btnStartRec = $('#btnStartRec'); //boton iniciar grabacion audio
 const btnStopRec = $('#btnStopRec'); //boton detener grabacion audio
 const recStatus= $('#recStatus'); //indicador del estado de grabacion
 const btnInstall = $('#btnInstall'); //boton para instalar la PWA
+const btnVibrar = $('#btnVibrar'); //boton para vibracion
+const btnRingtone = $('#btnRingtone'); //boton para tono
+
+const ringtone = new Audio('assets/old_phone_ring.mp3'); //tono de llamada
+ringtone.loop = true;
 
 //instalacion de la PWA (A2HS)
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -105,12 +113,12 @@ btnStopCam.addEventListener('click', () => stopCam());
 
 btnFlip.addEventListener('click', async () => {
     //alterna entre camara frontal y trasera
-    currentFacing = (currentFacing === 'enviroment') ? 'user' : 'environment';
+    currentFacing = (currentFacing === 'environment') ? 'user' : 'environment';
     stopCam();
     await startCam();
 });
 
-videoDevices.addEventListener('change', async () => {
+videoDevices.addEventListener('change', async (e) => {
     //cambia a un deviceID especifico elegido en el select
     const id = e.target.value;
     stopCam();
@@ -168,4 +176,112 @@ btnShot.addEventListener('click', () => {
         photos.prepend(wrap);
     }, 'image/png');
 });
+
+//grabacion de audio
+btnStartRec.addEventListener('click', async () => {
+    if (!('mediaDevices' in navigator)) {
+        alert('Este navegador no soporta el acceso a microfono');
+        return;
+    }
+    try {
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(audioStream);
+        chunks = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) chunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(chunks, { type: 'audio/webm' });
+            const url = URL.createObjectURL(blob);
+
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.src = url;
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `audio-${Date.now()}.webm`;
+            a.textContent = 'Descargar audio';
+            a.className = 'btn';
+
+            const wrap = document.createElement('div');
+            wrap.appendChild(audio);
+            wrap.appendChild(a);
+            audios.prepend(wrap);
+
+            recStatus.textContent = 'Audio guardado';
+            chunks = [];
+            if (audioStream) {
+                audioStream.getTracks().forEach(t => t.stop());
+                audioStream = null;
+            }
+            btnStartRec.disabled = false;
+            btnStopRec.disabled = true;
+        };
+
+        mediaRecorder.start();
+        recStatus.textContent = 'Grabando...';
+        btnStartRec.disabled = true;
+        btnStopRec.disabled = false;
+    } catch (err) {
+        alert('No se pudo iniciar la grabacion: ' + err.message);
+        console.error(err);
+    }
+});
+
+btnStopRec.addEventListener('click', () => {
+    if (!mediaRecorder || mediaRecorder.state !== 'recording') return;
+    mediaRecorder.stop();
+    recStatus.textContent = 'Procesando audio...';
+});
+
+//vibracion
+btnVibrar.addEventListener('click', () => {
+    if (!('vibrate' in navigator)) {
+        alert('Vibracion no soportada en este dispositivo/navegador');
+        return;
+    }
+    if (vibrateInterval) {
+        clearInterval(vibrateInterval);
+        vibrateInterval = null;
+        navigator.vibrate(0);
+        btnVibrar.textContent = 'Vibrar';
+    } else {
+        navigator.vibrate([200, 100, 200]);
+        vibrateInterval = setInterval(() => navigator.vibrate([200, 100, 200]), 1200);
+        btnVibrar.textContent = 'Detener vibracion';
+    }
+});
+
+//tono de llamada
+btnRingtone.addEventListener('click', async () => {
+    if (isRinging) {
+        ringtone.pause();
+        ringtone.currentTime = 0;
+        isRinging = false;
+        btnRingtone.textContent = 'Reproducir tono';
+        return;
+    }
+    try {
+        await ringtone.play();
+        isRinging = true;
+        btnRingtone.textContent = 'Detener tono';
+    } catch (err) {
+        alert('No se pudo reproducir el tono: ' + err.message);
+    }
+});
+
+//registro del service worker
+async function registerServiceWorker () {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+        await navigator.serviceWorker.register('./script.js');
+    } catch (err) {
+        console.warn('No se pudo registrar el Service Worker', err);
+    }
+}
+
+window.addEventListener('load', registerServiceWorker);
 

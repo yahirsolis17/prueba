@@ -1,5 +1,5 @@
 //nombre de la cache
-const CACHE_NAME = 'Media-PWA-v1';
+const CACHE_NAME = 'Media-PWA-v2';
 
 //archivos que se almacerean en cache
 const ASSETS = [
@@ -7,11 +7,18 @@ const ASSETS = [
     './index.html',
     './styles.css',
     './app.js',
+    './script.js',
     './manifest.webmanifest',
+    './favicon.png',
+    './icons/apple-touch-icon-180.png',
     './icons/icon-192.png',
+    './icons/icon-256.png',
+    './icons/icon-384.png',
     './icons/icon-512.png',
     './icons/maskable-192.png',
-    './icons/maskable-512.png'
+    './icons/maskable-512.png',
+    './assets/old_phone_ring.mp3',
+    './assets/old_phone_ring.ogg'
 ];
 
 //evento que se ejecuta cuando el SW se instala por primera vez
