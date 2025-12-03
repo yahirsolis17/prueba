@@ -238,20 +238,41 @@ btnStopRec.addEventListener('click', () => {
 });
 
 //vibracion
+function stopVibration () {
+    if (vibrateInterval) {
+        clearInterval(vibrateInterval);
+        vibrateInterval = null;
+    }
+    navigator.vibrate(0);
+    btnVibrar.textContent = 'Vibrar';
+}
+
+function startVibration () {
+    const pattern = [200, 100, 200, 100, 300]; //suave + doble toque
+    const ok = navigator.vibrate(pattern);
+    if (!ok) {
+        alert('La vibracion fue bloqueada o no es compatible en este dispositivo');
+        return;
+    }
+    vibrateInterval = setInterval(() => navigator.vibrate(pattern), 1500);
+    btnVibrar.textContent = 'Detener vibracion';
+}
+
 btnVibrar.addEventListener('click', () => {
     if (!('vibrate' in navigator)) {
         alert('Vibracion no soportada en este dispositivo/navegador');
         return;
     }
     if (vibrateInterval) {
-        clearInterval(vibrateInterval);
-        vibrateInterval = null;
-        navigator.vibrate(0);
-        btnVibrar.textContent = 'Vibrar';
+        stopVibration();
     } else {
-        navigator.vibrate([200, 100, 200]);
-        vibrateInterval = setInterval(() => navigator.vibrate([200, 100, 200]), 1200);
-        btnVibrar.textContent = 'Detener vibracion';
+        startVibration();
+    }
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        stopVibration();
     }
 });
 
