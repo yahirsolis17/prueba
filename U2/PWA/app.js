@@ -5,7 +5,7 @@ let mediaRecorder = null; //Instancia de mediarecorder para audio
 let chunks = []; //Buffers para audio grabado
 let audioStream = null; //Stream de microfono
 let beforeInstallEvent = null; //Evento diferido para mostrar el boton de instalacion
-let vibrateInterval = null; //Intervalo para vibracion
+let vibrateHandle = null; //Control de vibracion activa
 let isRinging = false; //Estado del tono de llamada
 
 //Accesos rapidos al DOM
@@ -239,9 +239,9 @@ btnStopRec.addEventListener('click', () => {
 
 //vibracion
 function stopVibration () {
-    if (vibrateInterval) {
-        clearInterval(vibrateInterval);
-        vibrateInterval = null;
+    if (vibrateHandle) {
+        clearTimeout(vibrateHandle);
+        vibrateHandle = null;
     }
     navigator.vibrate(0);
     btnVibrar.textContent = 'Vibrar';
@@ -262,12 +262,10 @@ function startVibration () {
         alert('La vibracion fue bloqueada o no es compatible en este dispositivo');
         return;
     }
-    vibrateInterval = setInterval(() => {
-        const allowed = navigator.vibrate(pattern);
-        if (allowed === false) {
-            stopVibration();
-        }
-    }, total + 250);
+    vibrateHandle = setTimeout(() => {
+        vibrateHandle = null;
+        btnVibrar.textContent = 'Vibrar';
+    }, total + 50);
     btnVibrar.textContent = 'Detener vibracion';
 }
 
@@ -276,7 +274,7 @@ btnVibrar.addEventListener('click', () => {
         alert('Vibracion no soportada en este dispositivo/navegador');
         return;
     }
-    if (vibrateInterval) {
+    if (vibrateHandle) {
         stopVibration();
     } else {
         startVibration();
